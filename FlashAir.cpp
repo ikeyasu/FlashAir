@@ -4,6 +4,7 @@
 
 #include <iSdio.h>
 #include <utility/Sd2CardExt.h>
+
 Sd2CardExt gCard;
 uint8_t gBuffer[512];
 
@@ -17,6 +18,143 @@ void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
   for (int i = 0; i < 4; i++) {
     dest[i] = src[i];
   }
+}
+
+uint32_t FlashAir::getNextSequenceId() {
+  if (gCard.readExtMemory(1, 1, 0x420, 0x34, gBuffer)) {
+    if (gBuffer[0x20] == 0x01) {
+      return get_u32(gBuffer + 0x24) + 1;
+    }
+  }
+  return 0; 
+}
+
+FlashAir::FlashAir(uint8_t chipSelectPin) {
+  if (!gCard.init(SPI_HALF_SPEED, chipSelectPin)) {
+    abort();
+  }
+}
+
+FlashAir::CommandResponse FlashAir::getCommandResponse(uint32_t sequenceId) {
+  memset(gBuffer, 0, 0x14);
+
+  for (int i = 0; i < 8; i++) {
+    if (!gCard.readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
+      return FlashAir::FAILED;
+    }
+
+    if (sequenceId != get_u32(gBuffer + 4)) {
+      continue;
+    }
+    uint8_t resp = get_u8(gBuffer + 8);
+    switch (resp) {
+      case 0x00:
+        return FlashAir::INITIAL;
+      case 0x01:
+        return FlashAir::PROCESSING;
+      case 0x02:
+        return FlashAir::REJECTED;
+      case 0x03:
+        return FlashAir::SUCCEEDED;
+      case 0x04:
+        return FlashAir::TERMINATED;
+      case 0x80:
+        return FlashAir::GENERAL_ERROR;
+      case 0x81:
+        return FlashAir::ARGUMENT_ERROR;
+      case 0x82:
+        return FlashAir::NETWORK_ERROR;
+      case 0x83:
+        return FlashAir::FILE_SYSTEM_ERROR;
+      case 0x84:
+        return FlashAir::BUFFER_OVERFLOW_ERROR;
+      default:
+        return FlashAir::FAILED;
+    }
+  }
+  return FlashAir::FAILED;
+}
+
+#if DEBUG_METHODS
+void FlashAir::debugCommandResponse() {
+  memset(gBuffer, 0, 0x14);
+
+  for (int i = 0; i < 8; i++) {
+    if (!gCard.readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
+      return;
+    }
+
+    Serial.print(F("cmd="));
+    Serial.print(get_u8(gBuffer + 0), DEC);
+    Serial.print(F("\t"));
+    Serial.print(F("seq="));
+    Serial.print(get_u32(gBuffer + 4), DEC);
+    Serial.print(F("\t"));
+    Serial.print(F("resp="));
+    uint8_t resp = get_u8(gBuffer + 8);
+    Serial.print(resp, HEX);
+    Serial.print(F("\t"));
+    switch (resp) {
+      case 0x00:
+        Serial.print(F("INITIAL"));
+        break;
+      case 0x01:
+        Serial.print(F("PROCESSING"));
+        break;
+      case 0x02:
+        Serial.print(F("REJECTED"));
+        break;
+      case 0x03:
+        Serial.print(F("SUCCEEDED"));
+        break;
+      case 0x04:
+        Serial.print(F("TERMINATED"));
+        break;
+      case 0x80:
+        Serial.print(F("GENERAL_ERROR"));
+        break;
+      case 0x81:
+        Serial.print(F("ARGUMENT_ERROR"));
+        break;
+      case 0x82:
+        Serial.print(F("NETWORK_ERROR"));
+        break;
+      case 0x83:
+        Serial.print(F("FILE_SYSTEM_ERROR"));
+        break;
+      case 0x84:
+        Serial.print(F("BUFFER_OVERFLOW_ERROR"));
+        break;
+      default:
+        Serial.print(F("FAILED"));
+        break;
+    }
+    Serial.println();
+  }
+}
+#endif
+
+boolean FlashAir::isCommandSucceeded(uint32_t sequenceId) {
+  return getCommandResponse(sequenceId) == FlashAir::SUCCEEDED;
+}
+
+boolean FlashAir::disconnect(uint32_t sequenceId) {
+  memset(gBuffer, 0, 512);
+  uint8_t* p = gBuffer;
+  p = put_command_header(p, 1, 0);
+  p = put_command_info_header(p, 0x07, sequenceId, 0);
+  put_command_header(gBuffer, 1, (p - gBuffer));
+  return gCard.writeExtDataPort(1, 1, 0x000, gBuffer);
+}
+boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
+  memset(gBuffer, 0, 512);
+  uint8_t* p = gBuffer;
+  p = put_command_header(p, 1, 0);
+  p = put_command_info_header(p, 0x02, sequenceId, 2);
+  p = put_str_arg(p, ssid);
+  p = put_str_arg(p, networkKey);
+  put_command_header(gBuffer, 1, (p - gBuffer));
+  return gCard.writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
 }
 
 Status* FlashAir::getStatus() {

@@ -3,6 +3,8 @@
 #ifndef FlashAir_h
 #define FlashAir_h
 
+#define DEBUG_METHODS 1
+
 #include <Arduino.h>
 
 class Status {
@@ -82,8 +84,32 @@ class FlashAir {
   private:
     Status status_;
   public:
+    enum CommandResponse {
+      INITIAL,
+      PROCESSING,
+      REJECTED,
+      SUCCEEDED,
+      TERMINATED,
+      GENERAL_ERROR,
+      ARGUMENT_ERROR,
+      NETWORK_ERROR,
+      FILE_SYSTEM_ERROR,
+      BUFFER_OVERFLOW_ERROR,
+      FAILED
+    };
+
     FlashAir(uint8_t chipSelectPin);
+    uint32_t getNextSequenceId();
+    CommandResponse getCommandResponse(uint32_t sequenceID);
+    boolean isCommandSucceeded(uint32_t sequenceID);
+
     Status* getStatus();
+    boolean disconnect(uint32_t sequenceID);
+    boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
+
+#if DEBUG_METHODS
+    void debugCommandResponse();
+#endif
 };
 
 #endif

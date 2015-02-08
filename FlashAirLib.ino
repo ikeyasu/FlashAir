@@ -26,10 +26,19 @@ void setup() {
   // Initialize SD card.
   Serial.print(F("\nInitializing SD card..."));  
   gFlashAir = new FlashAir(CHIP_SELECT_PIN);
-  Status* status = gFlashAir->getStatus();
-  printIPAddress(status->wifi.ipAddress);
+  //Status* status = gFlashAir->getStatus();
+  //printIPAddress(status->wifi.ipAddress);
+  Serial.print(F("nextSequenceID: "));
+  Serial.println(gFlashAir->getNextSequenceId(), DEC);
+  Serial.print(F("nextSequenceID: "));
+  Serial.println(gFlashAir->getNextSequenceId(), DEC);
+  gFlashAir->debugCommandResponse();
+  gFlashAir->connect(gFlashAir->getNextSequenceId(), "kumotori",  "ikeuchiyasuki");
+  //gFlashAir->debugCommandResponse();
 }
 
 void loop() {
+  delay(2000);
+  gFlashAir->debugCommandResponse();
 }
 
