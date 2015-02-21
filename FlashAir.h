@@ -6,6 +6,7 @@
 #define DEBUG_METHODS 1
 
 #include <Arduino.h>
+#include <utility/AbstructSd2Card.h>
 
 class Status {
   public:
@@ -83,6 +84,8 @@ class Status {
 class FlashAir {
   private:
     Status status_;
+    AbstructSd2Card* card_;
+    boolean isLastCommandSucceededToDispatch_;
   public:
     enum CommandResponse {
       INITIAL,
@@ -98,14 +101,19 @@ class FlashAir {
       FAILED
     };
 
+#ifndef USING_MOCK
     FlashAir(uint8_t chipSelectPin);
+#endif
+    FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card);
     uint32_t getNextSequenceId();
     CommandResponse getCommandResponse(uint32_t sequenceID);
     boolean isCommandSucceeded(uint32_t sequenceID);
 
     Status* getStatus();
     boolean disconnect(uint32_t sequenceID);
+    uint32_t disconnect();
     boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
+    boolean isLastCommandSucceededToDispatch();
 
 #if DEBUG_METHODS
     void debugCommandResponse();

@@ -3,15 +3,34 @@
 #include "FlashAir.h"
 
 #include <iSdio.h>
-#include <utility/Sd2CardExt.h>
+#include <utility/AbstructSd2Card.h>
 
-Sd2CardExt gCard;
+#ifndef USING_MOCK
+#include <utility/Sd2Card.h>
+#endif
+
 uint8_t gBuffer[512];
 
-FlashAir::FlashAir(uint8_t chipSelectPin) {
-  if (!gCard.init(SPI_HALF_SPEED, chipSelectPin)) {
-    abort();
+#define COMMAND_QUEUE_SIZE 8
+uint32_t gCommandQueue[COMMAND_QUEUE_SIZE];
+uint8_t gCommandQueueFlag = 0;
+
+uint8_t getFreeCommandQueue() {
+  for (uint8_t i = 0; i < COMMAND_QUEUE_SIZE; i++) {
+    if (((gCommandQueueFlag >> i) & 0x1) == 0) {
+      return i;
+    }
   }
+  return COMMAND_QUEUE_SIZE;
+}
+
+boolean appendCommandToQueue(uint32_t sequenceId) {
+  uint8_t i = getFreeCommandQueue();
+  if (i >= COMMAND_QUEUE_SIZE) return false;
+
+  gCommandQueue[i] = sequenceId;
+  gCommandQueueFlag = gCommandQueueFlag | (1 << i);
+  return true;
 }
 
 void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
@@ -20,26 +39,33 @@ void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
   }
 }
 
+#ifndef USING_MOCK
+FlashAir::FlashAir(uint8_t chipSelectPin) :
+  FlashAir(chipSelectPin, new Sd2Card()) {
+}
+#endif
+
+FlashAir::FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card) {
+  card_ = card;
+  if (!card_->init(SPI_HALF_SPEED, chipSelectPin)) {
+    abort();
+  }
+}
+
 uint32_t FlashAir::getNextSequenceId() {
-  if (gCard.readExtMemory(1, 1, 0x420, 0x34, gBuffer)) {
+  if (card_->readExtMemory(1, 1, 0x420, 0x34, gBuffer)) {
     if (gBuffer[0x20] == 0x01) {
       return get_u32(gBuffer + 0x24) + 1;
     }
   }
-  return 0; 
-}
-
-FlashAir::FlashAir(uint8_t chipSelectPin) {
-  if (!gCard.init(SPI_HALF_SPEED, chipSelectPin)) {
-    abort();
-  }
+  return 0;
 }
 
 FlashAir::CommandResponse FlashAir::getCommandResponse(uint32_t sequenceId) {
   memset(gBuffer, 0, 0x14);
 
   for (int i = 0; i < 8; i++) {
-    if (!gCard.readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
+    if (!card_->readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
       return FlashAir::FAILED;
     }
 
@@ -48,28 +74,28 @@ FlashAir::CommandResponse FlashAir::getCommandResponse(uint32_t sequenceId) {
     }
     uint8_t resp = get_u8(gBuffer + 8);
     switch (resp) {
-      case 0x00:
-        return FlashAir::INITIAL;
-      case 0x01:
-        return FlashAir::PROCESSING;
-      case 0x02:
-        return FlashAir::REJECTED;
-      case 0x03:
-        return FlashAir::SUCCEEDED;
-      case 0x04:
-        return FlashAir::TERMINATED;
-      case 0x80:
-        return FlashAir::GENERAL_ERROR;
-      case 0x81:
-        return FlashAir::ARGUMENT_ERROR;
-      case 0x82:
-        return FlashAir::NETWORK_ERROR;
-      case 0x83:
-        return FlashAir::FILE_SYSTEM_ERROR;
-      case 0x84:
-        return FlashAir::BUFFER_OVERFLOW_ERROR;
-      default:
-        return FlashAir::FAILED;
+    case 0x00:
+      return FlashAir::INITIAL;
+    case 0x01:
+      return FlashAir::PROCESSING;
+    case 0x02:
+      return FlashAir::REJECTED;
+    case 0x03:
+      return FlashAir::SUCCEEDED;
+    case 0x04:
+      return FlashAir::TERMINATED;
+    case 0x80:
+      return FlashAir::GENERAL_ERROR;
+    case 0x81:
+      return FlashAir::ARGUMENT_ERROR;
+    case 0x82:
+      return FlashAir::NETWORK_ERROR;
+    case 0x83:
+      return FlashAir::FILE_SYSTEM_ERROR;
+    case 0x84:
+      return FlashAir::BUFFER_OVERFLOW_ERROR;
+    default:
+      return FlashAir::FAILED;
     }
   }
   return FlashAir::FAILED;
@@ -80,7 +106,7 @@ void FlashAir::debugCommandResponse() {
   memset(gBuffer, 0, 0x14);
 
   for (int i = 0; i < 8; i++) {
-    if (!gCard.readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
+    if (!card_->readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
       return;
     }
 
@@ -95,39 +121,39 @@ void FlashAir::debugCommandResponse() {
     Serial.print(resp, HEX);
     Serial.print(F("\t"));
     switch (resp) {
-      case 0x00:
-        Serial.print(F("INITIAL"));
-        break;
-      case 0x01:
-        Serial.print(F("PROCESSING"));
-        break;
-      case 0x02:
-        Serial.print(F("REJECTED"));
-        break;
-      case 0x03:
-        Serial.print(F("SUCCEEDED"));
-        break;
-      case 0x04:
-        Serial.print(F("TERMINATED"));
-        break;
-      case 0x80:
-        Serial.print(F("GENERAL_ERROR"));
-        break;
-      case 0x81:
-        Serial.print(F("ARGUMENT_ERROR"));
-        break;
-      case 0x82:
-        Serial.print(F("NETWORK_ERROR"));
-        break;
-      case 0x83:
-        Serial.print(F("FILE_SYSTEM_ERROR"));
-        break;
-      case 0x84:
-        Serial.print(F("BUFFER_OVERFLOW_ERROR"));
-        break;
-      default:
-        Serial.print(F("FAILED"));
-        break;
+    case 0x00:
+      Serial.print(F("INITIAL"));
+      break;
+    case 0x01:
+      Serial.print(F("PROCESSING"));
+      break;
+    case 0x02:
+      Serial.print(F("REJECTED"));
+      break;
+    case 0x03:
+      Serial.print(F("SUCCEEDED"));
+      break;
+    case 0x04:
+      Serial.print(F("TERMINATED"));
+      break;
+    case 0x80:
+      Serial.print(F("GENERAL_ERROR"));
+      break;
+    case 0x81:
+      Serial.print(F("ARGUMENT_ERROR"));
+      break;
+    case 0x82:
+      Serial.print(F("NETWORK_ERROR"));
+      break;
+    case 0x83:
+      Serial.print(F("FILE_SYSTEM_ERROR"));
+      break;
+    case 0x84:
+      Serial.print(F("BUFFER_OVERFLOW_ERROR"));
+      break;
+    default:
+      Serial.print(F("FAILED"));
+      break;
     }
     Serial.println();
   }
@@ -144,8 +170,21 @@ boolean FlashAir::disconnect(uint32_t sequenceId) {
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x07, sequenceId, 0);
   put_command_header(gBuffer, 1, (p - gBuffer));
-  return gCard.writeExtDataPort(1, 1, 0x000, gBuffer);
+  return card_->writeExtDataPort(1, 1, 0x000, gBuffer);
 }
+
+uint32_t FlashAir::disconnect() {
+  uint32_t seq = getNextSequenceId();
+  isLastCommandSucceededToDispatch_ = disconnect(seq);
+  if (isLastCommandSucceededToDispatch_) {
+    isLastCommandSucceededToDispatch_ = appendCommandToQueue(seq);
+  }
+  return seq;
+}
+
+//boolean FlashAir::isDoneAllCommands() {
+//}
+
 boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
   memset(gBuffer, 0, 512);
   uint8_t* p = gBuffer;
@@ -154,12 +193,12 @@ boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* net
   p = put_str_arg(p, ssid);
   p = put_str_arg(p, networkKey);
   put_command_header(gBuffer, 1, (p - gBuffer));
-  return gCard.writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
+  return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
 }
 
 Status* FlashAir::getStatus() {
   memset(gBuffer, 0, 0x200);
-  if (!gCard.readExtMemory(1, 1, 0x400, 0x200, gBuffer)) {
+  if (!card_->readExtMemory(1, 1, 0x400, 0x200, gBuffer)) {
     return false;
   }
   // Show values in the application status area.
