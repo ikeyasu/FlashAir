@@ -108,15 +108,21 @@ class FlashAir {
     uint32_t getNextSequenceId();
     CommandResponse getCommandResponse(uint32_t sequenceID);
     boolean isCommandSucceeded(uint32_t sequenceID);
+    boolean isCommandDone(uint32_t sequenceID);
 
     Status* getStatus();
     boolean disconnect(uint32_t sequenceID);
     uint32_t disconnect();
     boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
+    uint32_t connect( const char* ssid, const char* networkKey);
     boolean isLastCommandSucceededToDispatch();
+    boolean isAllCommandDone();
+
+    void resume();
 
 #if DEBUG_METHODS
     void debugCommandResponse();
+    AbstructSd2Card* getSd2Card() {return card_;};
 #endif
 };
 

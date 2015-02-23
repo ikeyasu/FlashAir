@@ -79,7 +79,7 @@ test : $(TESTS)
 
 clean :
 	rm -f $(TESTS) gmock.a gtest_main.a gmock_main.a \
-			arduino_mock_all.a *.o
+			arduino_mock_all.a *.a *.o
 
 # Builds gtest.a and gtest_main.a.
 
@@ -129,12 +129,24 @@ iSdio.o : $(TEST_DIR)/iSdio/*.cpp \
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
 		$(TEST_DIR)/iSdio/*.cpp
 
+FlashAir.o : $(LIB_DIR)/FlashAir.cpp \
+		$(LIB_DIR)/FlashAir.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
+		$(LIB_DIR)/FlashAir.cpp
+
+CommandQueue.o : $(LIB_DIR)/CommandQueue.cpp \
+		$(LIB_DIR)/CommandQueue.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
+		$(LIB_DIR)/CommandQueue.cpp
+
+# TODO: Add FlashAir.o later
+FlashAir.a: CommandQueue.o
+	$(AR) $(ARFLAGS) $@ $^
+
 test_all.o : $(TEST_DIR)/*.cpp \
-		$(LIB_DIR)/*.cpp \
-		$(LIB_DIR)/*.h \
 		$(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
-		$(TEST_DIR)/*.cpp
+		$(TEST_DIR)/test_all.cpp
 
-test_all.out : test_all.o gmock_main.a  arduino_mock_all.a iSdio.o
+test_all.out : test_all.o gmock_main.a  arduino_mock_all.a iSdio.o FlashAir.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@

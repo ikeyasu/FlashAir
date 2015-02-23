@@ -3,10 +3,11 @@
 
 #include "Arduino.h"
 #include "Serial.h"
-#include "../FlashAir.cpp"
 
-int main(){
-//  RUN_ALL_TESTS();
-  return 0;
+#include "CommandQueue_unittest.cpp"
+
+int main(int argc, char* argv[])
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }
-

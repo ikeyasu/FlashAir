@@ -2,6 +2,7 @@
 
 #include "FlashAir.h"
 
+#include "CommandQueue.h"
 #include <iSdio.h>
 #include <utility/AbstructSd2Card.h>
 
@@ -10,28 +11,6 @@
 #endif
 
 uint8_t gBuffer[512];
-
-#define COMMAND_QUEUE_SIZE 8
-uint32_t gCommandQueue[COMMAND_QUEUE_SIZE];
-uint8_t gCommandQueueFlag = 0;
-
-uint8_t getFreeCommandQueue() {
-  for (uint8_t i = 0; i < COMMAND_QUEUE_SIZE; i++) {
-    if (((gCommandQueueFlag >> i) & 0x1) == 0) {
-      return i;
-    }
-  }
-  return COMMAND_QUEUE_SIZE;
-}
-
-boolean appendCommandToQueue(uint32_t sequenceId) {
-  uint8_t i = getFreeCommandQueue();
-  if (i >= COMMAND_QUEUE_SIZE) return false;
-
-  gCommandQueue[i] = sequenceId;
-  gCommandQueueFlag = gCommandQueueFlag | (1 << i);
-  return true;
-}
 
 void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
   for (int i = 0; i < 4; i++) {
@@ -164,6 +143,11 @@ boolean FlashAir::isCommandSucceeded(uint32_t sequenceId) {
   return getCommandResponse(sequenceId) == FlashAir::SUCCEEDED;
 }
 
+boolean FlashAir::isCommandDone(uint32_t sequenceId) {
+  return getCommandResponse(sequenceId) != FlashAir::INITIAL &&
+    getCommandResponse(sequenceId) != FlashAir::PROCESSING;
+}
+
 boolean FlashAir::disconnect(uint32_t sequenceId) {
   memset(gBuffer, 0, 512);
   uint8_t* p = gBuffer;
@@ -175,15 +159,32 @@ boolean FlashAir::disconnect(uint32_t sequenceId) {
 
 uint32_t FlashAir::disconnect() {
   uint32_t seq = getNextSequenceId();
+  if (appendCommandToQueue(seq)) return 0;
   isLastCommandSucceededToDispatch_ = disconnect(seq);
-  if (isLastCommandSucceededToDispatch_) {
-    isLastCommandSucceededToDispatch_ = appendCommandToQueue(seq);
-  }
   return seq;
 }
 
-//boolean FlashAir::isDoneAllCommands() {
-//}
+boolean FlashAir::isAllCommandDone() {
+  return countCommandQueue() == 0;
+}
+
+boolean FlashAir::isLastCommandSucceededToDispatch() {
+  return isLastCommandSucceededToDispatch_;
+}
+
+void CallbackEachCommands(void* object, uint32_t sequenceId) {
+  FlashAir* self = (FlashAir*)object;
+  if (self->isCommandDone(sequenceId)) {
+    removeCommandFromQueue(sequenceId);
+  }
+}
+
+void FlashAir::resume() {
+  uint8_t i;
+  if (!isAllCommandDone()) {
+    eachCommandQueue(CallbackEachCommands, this);
+  }
+}
 
 boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
   memset(gBuffer, 0, 512);
@@ -194,6 +195,13 @@ boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* net
   p = put_str_arg(p, networkKey);
   put_command_header(gBuffer, 1, (p - gBuffer));
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
+}
+
+uint32_t FlashAir::connect(const char* ssid, const char* networkKey) {
+  uint32_t seq = getNextSequenceId();
+  if (!appendCommandToQueue(seq)) return 0;
+  isLastCommandSucceededToDispatch_ = connect(seq, ssid, networkKey);
+  return seq;
 }
 
 Status* FlashAir::getStatus() {
