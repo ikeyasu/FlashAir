@@ -140,7 +140,7 @@ CommandQueue.o : $(LIB_DIR)/CommandQueue.cpp \
 		$(LIB_DIR)/CommandQueue.cpp
 
 # TODO: Add FlashAir.o later
-FlashAir.a: CommandQueue.o
+FlashAir.a: CommandQueue.o FlashAir.o
 	$(AR) $(ARFLAGS) $@ $^
 
 test_all.o : $(TEST_DIR)/*.cpp \

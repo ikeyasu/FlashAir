@@ -8,6 +8,10 @@
 
 #ifndef USING_MOCK
 #include <utility/Sd2Card.h>
+#else
+#if DEBUG_METHODS
+#include <Serial.h>
+#endif
 #endif
 
 uint8_t gBuffer[512];
@@ -180,7 +184,6 @@ void CallbackEachCommands(void* object, uint32_t sequenceId) {
 }
 
 void FlashAir::resume() {
-  uint8_t i;
   if (!isAllCommandDone()) {
     eachCommandQueue(CallbackEachCommands, this);
   }
