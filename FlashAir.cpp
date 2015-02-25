@@ -2,38 +2,49 @@
 
 #include "FlashAir.h"
 
+#ifndef MEMORY_SAVING
 #include "CommandQueue.h"
+#endif
 #include <iSdio.h>
 #include <utility/AbstructSd2Card.h>
 
 #ifndef USING_MOCK
 #include <utility/Sd2Card.h>
 #else
-#if DEBUG_METHODS
+#ifdef DEBUG_METHODS
 #include <Serial.h>
 #endif
 #endif
 
+#ifdef ENABLE_GET_STATUS
 uint8_t gBuffer[512];
+#else
+uint8_t gBuffer[0x34];
+#endif
 
+#ifdef ENABLE_GET_STATUS
 void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
   for (int i = 0; i < 4; i++) {
     dest[i] = src[i];
   }
 }
-
-#ifndef USING_MOCK
-FlashAir::FlashAir(uint8_t chipSelectPin) :
-  FlashAir(chipSelectPin, new Sd2Card()) {
-}
 #endif
 
+#ifndef USING_MOCK
+FlashAir::FlashAir(uint8_t chipSelectPin) {
+  card_ = new Sd2Card();
+  if (!card_->init(SPI_HALF_SPEED, chipSelectPin)) {
+    abort();
+  }
+}
+#else
 FlashAir::FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card) {
   card_ = card;
   if (!card_->init(SPI_HALF_SPEED, chipSelectPin)) {
     abort();
   }
 }
+#endif
 
 uint32_t FlashAir::getNextSequenceId() {
   if (card_->readExtMemory(1, 1, 0x420, 0x34, gBuffer)) {
@@ -45,7 +56,7 @@ uint32_t FlashAir::getNextSequenceId() {
 }
 
 FlashAir::CommandResponse FlashAir::getCommandResponse(uint32_t sequenceId) {
-  memset(gBuffer, 0, 0x14);
+  //memset(gBuffer, 0, 0x14);
 
   for (int i = 0; i < 8; i++) {
     if (!card_->readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
@@ -84,7 +95,7 @@ FlashAir::CommandResponse FlashAir::getCommandResponse(uint32_t sequenceId) {
   return FlashAir::FAILED;
 }
 
-#if DEBUG_METHODS
+#ifdef DEBUG_METHODS
 void FlashAir::debugCommandResponse() {
   memset(gBuffer, 0, 0x14);
 
@@ -141,11 +152,11 @@ void FlashAir::debugCommandResponse() {
     Serial.println();
   }
 }
-#endif
 
 boolean FlashAir::isCommandSucceeded(uint32_t sequenceId) {
   return getCommandResponse(sequenceId) == FlashAir::SUCCEEDED;
 }
+#endif
 
 boolean FlashAir::isCommandDone(uint32_t sequenceId) {
   return getCommandResponse(sequenceId) != FlashAir::INITIAL &&
@@ -153,7 +164,7 @@ boolean FlashAir::isCommandDone(uint32_t sequenceId) {
 }
 
 boolean FlashAir::disconnect(uint32_t sequenceId) {
-  memset(gBuffer, 0, 512);
+  //memset(gBuffer, 0, 512);
   uint8_t* p = gBuffer;
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x07, sequenceId, 0);
@@ -161,13 +172,7 @@ boolean FlashAir::disconnect(uint32_t sequenceId) {
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer);
 }
 
-uint32_t FlashAir::disconnect() {
-  uint32_t seq = getNextSequenceId();
-  if (appendCommandToQueue(seq)) return 0;
-  isLastCommandSucceededToDispatch_ = disconnect(seq);
-  return seq;
-}
-
+#ifndef MEMORY_SAVING
 boolean FlashAir::isAllCommandDone() {
   return countCommandQueue() == 0;
 }
@@ -188,9 +193,10 @@ void FlashAir::resume() {
     eachCommandQueue(CallbackEachCommands, this);
   }
 }
+#endif
 
 boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
-  memset(gBuffer, 0, 512);
+  //memset(gBuffer, 0, 512);
   uint8_t* p = gBuffer;
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x02, sequenceId, 2);
@@ -200,6 +206,7 @@ boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* net
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
 }
 
+#ifndef MEMORY_SAVING
 uint32_t FlashAir::connect(const char* ssid, const char* networkKey) {
   uint32_t seq = getNextSequenceId();
   if (!appendCommandToQueue(seq)) return 0;
@@ -207,6 +214,15 @@ uint32_t FlashAir::connect(const char* ssid, const char* networkKey) {
   return seq;
 }
 
+uint32_t FlashAir::disconnect() {
+  uint32_t seq = getNextSequenceId();
+  if (appendCommandToQueue(seq)) return 0;
+  isLastCommandSucceededToDispatch_ = disconnect(seq);
+  return seq;
+}
+#endif
+
+#ifdef ENABLE_GET_STATUS
 Status* FlashAir::getStatus() {
   memset(gBuffer, 0, 0x200);
   if (!card_->readExtMemory(1, 1, 0x400, 0x200, gBuffer)) {
@@ -294,6 +310,6 @@ Status* FlashAir::getStatus() {
   status_.wifi.fileSystemModified = (gBuffer[0x176] & 0x01) == 0x00;
   return &status_;
 }
-
+#endif
 
 

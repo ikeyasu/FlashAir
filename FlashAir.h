@@ -3,11 +3,17 @@
 #ifndef FlashAir_h
 #define FlashAir_h
 
-#define DEBUG_METHODS 1
+//#define MEMORY_SAVING
+
+#ifndef MEMORY_SAVING
+#define DEBUG_METHODS
+#define ENABLE_GET_STATUS
+#endif
 
 #include <Arduino.h>
 #include <utility/AbstructSd2Card.h>
 
+#ifdef ENABLE_GET_STATUS
 class Status {
   public:
     class WiFi {
@@ -80,10 +86,13 @@ class Status {
     };
     WiFi wifi;
 };
+#endif
 
 class FlashAir {
   private:
+#ifdef ENABLE_GET_STATUS
     Status status_;
+#endif
     AbstructSd2Card* card_;
     boolean isLastCommandSucceededToDispatch_;
   public:
@@ -103,24 +112,33 @@ class FlashAir {
 
 #ifndef USING_MOCK
     FlashAir(uint8_t chipSelectPin);
-#endif
+#else
     FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card);
+#endif
     uint32_t getNextSequenceId();
     CommandResponse getCommandResponse(uint32_t sequenceID);
+#ifndef MEMORY_SAVING
     boolean isCommandSucceeded(uint32_t sequenceID);
+#endif
     boolean isCommandDone(uint32_t sequenceID);
 
+#ifdef ENABLE_GET_STATUS
     Status* getStatus();
+#endif
     boolean disconnect(uint32_t sequenceID);
-    uint32_t disconnect();
     boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
+    //boolean requestHTTP(uint32_t sequenceID, const char* host, const char* path);
+    //uint32_t requestHTTP(const char* host, const char* path);
+    //char* getHTTPResponse();
+#ifndef MEMORY_SAVING
+    uint32_t disconnect();
     uint32_t connect( const char* ssid, const char* networkKey);
     boolean isLastCommandSucceededToDispatch();
     boolean isAllCommandDone();
-
     void resume();
+#endif
 
-#if DEBUG_METHODS
+#ifdef DEBUG_METHODS
     void debugCommandResponse();
     AbstructSd2Card* getSd2Card() {return card_;};
 #endif

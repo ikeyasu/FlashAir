@@ -4,9 +4,12 @@
 
 #define SERIAL_DEBUG 0
 
-int CHIP_SELECT_PIN = 4;
+#define CHIP_SELECT_PIN 4 //3
+#define LED 13 //4
 
 FlashAir* gFlashAir;
+boolean ledOn = LOW;
+uint32_t gSeq;
 
 #if SERIAL_DEBUG
 void printIPAddress(uint8_t ip[4]) {
@@ -28,15 +31,20 @@ void setup() {
     ;
   }
 #endif
+  pinMode(LED, OUTPUT);
 
   gFlashAir = new FlashAir(CHIP_SELECT_PIN);
-  gFlashAir->connect("kumotori",  "ikeuchiyasuki");
+  gSeq = gFlashAir->connect(gFlashAir->getNextSequenceId(), "kumotori",  "ikeuchiyasuki");
 }
 
-uint8_t buffer[512];
-
 void loop() {
-  delay(2000);
+  if (gFlashAir->isCommandDone(gSeq)) {
+    digitalWrite(LED, HIGH); 
+  } else {
+    digitalWrite(LED, ledOn);
+    ledOn = (ledOn == HIGH) ? LOW : HIGH;
+  }
+  delay(500);
 #if SERIAL_DEBUG
   Serial.print(F("isDone :"));
   Serial.println(gFlashAir->isAllCommandDone());
@@ -51,7 +59,6 @@ void loop() {
   }
 #endif
   //gFlashAir->debugCommandResponse();
-  gFlashAir->resume();
-  memset(buffer, 0, 0x200);
+  //gFlashAir->resume();
 }
 

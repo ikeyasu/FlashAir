@@ -8,7 +8,7 @@ extern "C" {
 #error COMMAND_QUEUE_SIZE must be equal to or less than 8
 #endif
 
-uint32_t gQueue[COMMAND_QUEUE_SIZE];
+uint32_t gQueue[1];
 uint8_t gFlags = 0;
 
 #ifndef TRUE
