@@ -47,9 +47,9 @@ FlashAir::FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card) {
 #endif
 
 uint32_t FlashAir::getNextSequenceId() {
-  if (card_->readExtMemory(1, 1, 0x420, 0x34, gBuffer)) {
-    if (gBuffer[0x20] == 0x01) {
-      return get_u32(gBuffer + 0x24) + 1;
+  if (card_->readExtMemory(1, 1, 0x440, 0x8, gBuffer)) {
+    if (gBuffer[0x0] == 0x01) {
+      return get_u32(gBuffer + 0x4) + 1;
     }
   }
   return 0;
