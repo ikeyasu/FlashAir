@@ -56,7 +56,7 @@ uint32_t FlashAir::getNextSequenceId() {
 }
 
 FlashAir::CommandResponse FlashAir::getCommandResponse(uint32_t sequenceId) {
-  //memset(gBuffer, 0, 0x14);
+  memset(gBuffer, 0, 0x14);
 
   for (int i = 0; i < 8; i++) {
     if (!card_->readExtMemory(1, 1, 0x440 + (0x14 * i), 0x14, gBuffer)) {
@@ -160,11 +160,15 @@ boolean FlashAir::isCommandSucceeded(uint32_t sequenceId) {
 
 boolean FlashAir::isCommandDone(uint32_t sequenceId) {
   return getCommandResponse(sequenceId) != FlashAir::INITIAL &&
-    getCommandResponse(sequenceId) != FlashAir::PROCESSING;
+         getCommandResponse(sequenceId) != FlashAir::PROCESSING;
 }
 
 boolean FlashAir::disconnect(uint32_t sequenceId) {
-  //memset(gBuffer, 0, 512);
+#ifdef ENABLE_GET_STATUS
+  memset(gBuffer, 0, 512);
+#else
+#error TODO connect/dissconnect buffer
+#endif
   uint8_t* p = gBuffer;
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x07, sequenceId, 0);
@@ -196,7 +200,11 @@ void FlashAir::resume() {
 #endif
 
 boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
-  //memset(gBuffer, 0, 512);
+#ifdef ENABLE_GET_STATUS
+  memset(gBuffer, 0, 512);
+#else
+#error TODO connect/dissconnect buffer
+#endif
   uint8_t* p = gBuffer;
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x02, sequenceId, 2);
@@ -204,6 +212,52 @@ boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* net
   p = put_str_arg(p, networkKey);
   put_command_header(gBuffer, 1, (p - gBuffer));
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
+}
+
+boolean FlashAir::requestHTTP(uint32_t sequenceId, boolean is_https, const char* host, const char* path) {
+#ifdef ENABLE_GET_STATUS
+  memset(gBuffer, 0, 512);
+#else
+#error TODO requestHTTP buffer
+#endif
+  uint8_t* p = gBuffer;
+  uint8_t* arg2_data_head;
+  uint8_t command;
+  command = is_https ? 0x23 : 0x21;
+  p = put_command_header(p, 1, 0);
+  p = put_command_info_header(p, command, sequenceId, 2);
+  p = put_str_arg(p, host);   // Argument #1.
+  arg2_data_head = p;
+  p = put_str_arg(p, "GET "); // Argument #2.
+  p = put_T(p, path);
+  p = put_T(p, " HTTP/1.1\r\n"
+            "Host: ");
+  p = put_T(p, host);
+  p = put_T(p, "\r\n"
+            "User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/36.0.1985.125 Safari/537.36\r\n"
+            "\r\n");
+  uint32_t len = p - arg2_data_head - sizeof(uint32_t);
+  put_T(arg2_data_head, len);
+  for (uint32_t i = 0; i < ((4 - (len & 3)) & 3); ++i) { // padding
+    *p++ = 0;
+  }
+  // Serial.print((char*)(arg2_data_head + sizeof(uint32_t)));
+  put_command_header(gBuffer, 1, (p - gBuffer));
+  return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
+}
+
+const char* FlashAir::getHTTPResponse(uint32_t *out_length) {
+#ifndef ENABLE_GET_STATUS
+#error TODO getHTTPResponse buffer
+#endif
+  if (!card_->readExtDataPort(1, 1, 0x200, gBuffer)) {
+    return false;
+  }
+  uint32_t totalSize = get_u32(gBuffer + 20);
+  uint32_t availableSize = totalSize > 488 ? 488 : totalSize;
+  *out_length = availableSize;
+  return (char*)(gBuffer + 24);
+  // TODO: remaining data
 }
 
 #ifndef MEMORY_SAVING

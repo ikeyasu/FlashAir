@@ -127,9 +127,9 @@ class FlashAir {
 #endif
     boolean disconnect(uint32_t sequenceID);
     boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
-    //boolean requestHTTP(uint32_t sequenceID, const char* host, const char* path);
+    boolean requestHTTP(uint32_t sequenceID, boolean is_https, const char* host, const char* path);
     //uint32_t requestHTTP(const char* host, const char* path);
-    //char* getHTTPResponse();
+    const char* getHTTPResponse(uint32_t* out_length);
 #ifndef MEMORY_SAVING
     uint32_t disconnect();
     uint32_t connect( const char* ssid, const char* networkKey);
@@ -140,7 +140,9 @@ class FlashAir {
 
 #ifdef DEBUG_METHODS
     void debugCommandResponse();
-    AbstructSd2Card* getSd2Card() {return card_;};
+    AbstructSd2Card* getSd2Card() {
+      return card_;
+    };
 #endif
 };
 
