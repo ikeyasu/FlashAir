@@ -328,13 +328,13 @@ static const pin_map_t digitalPinMap[] = {
 };
 #endif  // defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
 //------------------------------------------------------------------------------
-static const uint8_t digitalPinCount = sizeof(digitalPinMap)/sizeof(pin_map_t);
+static const uint8_t digitalPinCount = sizeof(digitalPinMap) / sizeof(pin_map_t);
 
 uint8_t badPinNumber(void)
-  __attribute__((error("Pin number is too large or not a constant")));
+__attribute__((error("Pin number is too large or not a constant")));
 
 static inline __attribute__((always_inline))
-  uint8_t getPinMode(uint8_t pin) {
+uint8_t getPinMode(uint8_t pin) {
   if (__builtin_constant_p(pin) && pin < digitalPinCount) {
     return (*digitalPinMap[pin].ddr >> digitalPinMap[pin].bit) & 1;
   } else {
@@ -342,7 +342,7 @@ static inline __attribute__((always_inline))
   }
 }
 static inline __attribute__((always_inline))
-  void setPinMode(uint8_t pin, uint8_t mode) {
+void setPinMode(uint8_t pin, uint8_t mode) {
   if (__builtin_constant_p(pin) && pin < digitalPinCount) {
     if (mode) {
       *digitalPinMap[pin].ddr |= 1 << digitalPinMap[pin].bit;
@@ -354,7 +354,7 @@ static inline __attribute__((always_inline))
   }
 }
 static inline __attribute__((always_inline))
-  uint8_t fastDigitalRead(uint8_t pin) {
+uint8_t fastDigitalRead(uint8_t pin) {
   if (__builtin_constant_p(pin) && pin < digitalPinCount) {
     return (*digitalPinMap[pin].pin >> digitalPinMap[pin].bit) & 1;
   } else {
@@ -362,7 +362,7 @@ static inline __attribute__((always_inline))
   }
 }
 static inline __attribute__((always_inline))
-  void fastDigitalWrite(uint8_t pin, uint8_t value) {
+void fastDigitalWrite(uint8_t pin, uint8_t value) {
   if (__builtin_constant_p(pin) && pin < digitalPinCount) {
     if (value) {
       *digitalPinMap[pin].port |= 1 << digitalPinMap[pin].bit;
