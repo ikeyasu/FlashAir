@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-#define COMMAND_QUEUE_SIZE 1
+#define COMMAND_QUEUE_SIZE 8
 uint8_t getFreeCommandQueue();
 uint8_t appendCommandToQueue(uint32_t sequenceId);
 uint8_t removeCommandFromQueue(uint8_t sequenceId);

@@ -20,9 +20,8 @@
 #ifndef AbstructSd2Card_h
 #define AbstructSd2Card_h
 
+#include "config.h"
 #include "SdInfo.h"
-
-//#define MEMORY_SAVING
 
 /** Set SCK to max rate of F_CPU/2. See Sd2Card::setSckRate(). */
 uint8_t const SPI_FULL_SPEED = 0;

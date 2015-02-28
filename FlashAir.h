@@ -3,7 +3,7 @@
 #ifndef FlashAir_h
 #define FlashAir_h
 
-//#define MEMORY_SAVING
+#include "config.h"
 
 #ifndef MEMORY_SAVING
 #define DEBUG_METHODS
