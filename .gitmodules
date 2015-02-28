@@ -7,6 +7,3 @@
 [submodule "test/gmock"]
 	path = test/gmock
 	url = https://chromium.googlesource.com/external/gmock
-[submodule "test/iSdio"]
-	path = test/iSdio
-	url = git@github.com:ikeyasu/iSdio.git

@@ -11,7 +11,7 @@
 #endif
 
 #include <Arduino.h>
-#include <utility/AbstructSd2Card.h>
+#include "AbstructSd2Card.h"
 
 #ifdef ENABLE_GET_STATUS
 class Status {

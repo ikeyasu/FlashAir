@@ -39,7 +39,6 @@ TEST_DIR = .
 CPPFLAGS += -isystem $(GTEST_DIR)/include -isystem $(GMOCK_DIR)/include \
 		-I$(ARDUINO_MOCK_DIR)/include \
 		-I$(ARDUINO_MOCK_DIR)/include/arduino-mock \
-		-I$(TEST_DIR)/iSdio \
 		-I$(LIB_DIR) \
 		-I$(TEST_DIR)
 
@@ -124,10 +123,10 @@ arduino_mock_all.a : ArduinoMockAll.o
 # gtest_main.a, depending on whether it defines its own main()
 # function.
 
-iSdio.o : $(TEST_DIR)/iSdio/*.cpp \
-		$(TEST_DIR)/iSdio/*.h
+iSdio.o : $(LIB_DIR)/iSdio.cpp \
+		$(LIB_DIR)/iSdio.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
-		$(TEST_DIR)/iSdio/*.cpp
+		$(LIB_DIR)/*.cpp
 
 FlashAir.o : $(LIB_DIR)/FlashAir.cpp \
 		$(LIB_DIR)/FlashAir.h

@@ -1,6 +1,4 @@
 #include "FlashAir.h"
-#include <iSdio.h>
-#include <utility/Sd2CardExt.h>
 
 #define SERIAL_DEBUG
 //#define SERIAL_DEBUG_VERBOSE 
