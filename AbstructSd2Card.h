@@ -160,6 +160,7 @@ class AbstructSd2Card {
     virtual uint8_t readExtDataPort(uint8_t mio, uint8_t func, uint16_t addr, uint8_t* dst) = 0;
     virtual uint8_t readExtMemory(uint8_t mio, uint8_t func, uint32_t addr, uint16_t count, uint8_t* dst) = 0;
     virtual uint8_t writeExtDataPort(uint8_t mio, uint8_t func, uint16_t addr, const uint8_t* src) = 0;
+    virtual uint8_t writeExtDataPort(uint8_t mio, uint8_t func, uint16_t addr, const uint8_t* src, uint16_t length) = 0;
 #ifdef MEMORY_SAVING
     virtual uint8_t writeExtMemory(uint8_t mio, uint8_t func, uint32_t addr, uint16_t count, const uint8_t* src) = 0;
     virtual uint8_t writeExtMask(uint8_t mio, uint8_t func, uint32_t addr, uint8_t mask, const uint8_t* src) = 0;

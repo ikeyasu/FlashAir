@@ -17,9 +17,11 @@
 #endif
 
 #ifdef ENABLE_GET_STATUS
+const uint16_t BUFFER_LENGTH = 512;
 uint8_t gBuffer[512];
 #else
-uint8_t gBuffer[0x34];
+const uint16_t BUFFER_LENGTH = 32;
+uint8_t gBuffer[0x32];
 #endif
 
 #ifdef ENABLE_GET_STATUS
@@ -164,16 +166,12 @@ boolean FlashAir::isCommandDone(uint32_t sequenceId) {
 }
 
 boolean FlashAir::disconnect(uint32_t sequenceId) {
-#ifdef ENABLE_GET_STATUS
-  memset(gBuffer, 0, 512);
-#else
-#error TODO connect/dissconnect buffer
-#endif
+  memset(gBuffer, 0, BUFFER_LENGTH);
   uint8_t* p = gBuffer;
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x07, sequenceId, 0);
   put_command_header(gBuffer, 1, (p - gBuffer));
-  return card_->writeExtDataPort(1, 1, 0x000, gBuffer);
+  return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH);
 }
 
 #ifndef MEMORY_SAVING
@@ -200,23 +198,19 @@ void FlashAir::resume() {
 #endif
 
 boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
-#ifdef ENABLE_GET_STATUS
-  memset(gBuffer, 0, 512);
-#else
-#error TODO connect/dissconnect buffer
-#endif
+  memset(gBuffer, 0, BUFFER_LENGTH);
   uint8_t* p = gBuffer;
   p = put_command_header(p, 1, 0);
   p = put_command_info_header(p, 0x02, sequenceId, 2);
   p = put_str_arg(p, ssid);
   p = put_str_arg(p, networkKey);
   put_command_header(gBuffer, 1, (p - gBuffer));
-  return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
+  return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH) ? true : false;
 }
 
 boolean FlashAir::requestHTTP(uint32_t sequenceId, boolean is_https, const char* host, const char* path) {
 #ifdef ENABLE_GET_STATUS
-  memset(gBuffer, 0, 512);
+  memset(gBuffer, 0, BUFFER_LENGTH);
 #else
 #error TODO requestHTTP buffer
 #endif
@@ -243,7 +237,7 @@ boolean FlashAir::requestHTTP(uint32_t sequenceId, boolean is_https, const char*
   }
   // Serial.print((char*)(arg2_data_head + sizeof(uint32_t)));
   put_command_header(gBuffer, 1, (p - gBuffer));
-  return card_->writeExtDataPort(1, 1, 0x000, gBuffer) ? true : false;
+  return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH) ? true : false;
 }
 
 const char* FlashAir::getHTTPResponse(uint32_t *out_length) {

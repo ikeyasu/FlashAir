@@ -921,6 +921,24 @@ uint8_t Sd2Card::writeExtDataPort(uint8_t mio, uint8_t func,
 
   return writeExt(arg, src, 512);
 }
+
+//------------------------------------------------------------------------------
+/**
+ * Write a 512 byte data port into an extension register space.
+ *
+ * \return The value one, true, is returned for success and
+ * the value zero, false, is returned for failure.
+ */
+uint8_t Sd2Card::writeExtDataPort(uint8_t mio, uint8_t func,
+                                  uint16_t addr, const uint8_t* src,
+				  const uint16_t length) {
+  uint32_t arg =
+    (((uint32_t)mio & 0x1) << 31) |
+    (mio ? (((uint32_t)func & 0x7) << 28) : (((uint32_t)func & 0xF) << 27)) |
+    (((uint32_t)addr & 0x1FE00) << 9);
+
+  return writeExt(arg, src, length);
+}
 #ifdef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /**
