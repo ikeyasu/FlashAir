@@ -88,6 +88,8 @@ class Status {
 };
 #endif
 
+typedef boolean (*CallbackDataRecieved)(uint8_t c);
+
 class FlashAir {
   private:
 #ifdef ENABLE_GET_STATUS
@@ -128,8 +130,12 @@ class FlashAir {
     boolean disconnect(uint32_t sequenceID);
     boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
     boolean requestHTTP(uint32_t sequenceID, boolean is_https, const char* host, const char* path);
+    boolean requestHTTPLowMemory(uint32_t sequenceID, boolean is_https, const char* host, const char* path);
+#ifdef ENABLE_GET_STATUS
     //uint32_t requestHTTP(const char* host, const char* path);
     const char* getHTTPResponse(uint32_t* out_length);
+#endif
+    boolean getHTTPResponse(CallbackDataRecieved callback);
 #ifndef MEMORY_SAVING
     uint32_t disconnect();
     uint32_t connect( const char* ssid, const char* networkKey);

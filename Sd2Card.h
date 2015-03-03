@@ -88,6 +88,14 @@ class Sd2Card : public AbstructSd2Card {
       return init(sckRateID, SD_CHIP_SELECT_PIN);
     }
     uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
+
+    boolean startExtCommand(uint8_t mio, uint8_t func, uint32_t addr);
+    uint16_t sendCommandHeader(uint8_t num_commands, uint32_t command_bytes);
+    uint16_t sendCommandInfoHeader(uint16_t command_id, uint32_t sequence_id, uint16_t num_args);
+    uint32_t sendStringArrayArg(const char** string_array, uint8_t array_len);
+    uint32_t sendStringArg(const char* string);
+    boolean endExtCommand(uint32_t sent_data_len);
+
 #ifndef MEMORY_SAVING
     void partialBlockRead(uint8_t value);
     /** Returns the current value, true or false, for partial block read. */

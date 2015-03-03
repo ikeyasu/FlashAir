@@ -41,15 +41,27 @@ void setup() {
   pinMode(LED, OUTPUT);
 
   gFlashAir = new FlashAir(CHIP_SELECT_PIN);
-  //gFlashAir->disconnect(gFlashAir->getNextSequenceId());
 
-  gStep = STEP_CONNECT;
+  Status* status = gFlashAir->getStatus();
+  if (status->wifi.connected) {
+    gSeq = gFlashAir->getNextSequenceId();
+    gFlashAir->disconnect(gSeq);
+    gStep = STEP_START;
+  } else {
+    gStep = STEP_CONNECT;
+  }
 }
 
 void loop() {
   const char* response;
   uint32_t len, i;
   switch (gStep) {
+    case STEP_START:
+      if (!gFlashAir->isCommandDone(gSeq)) {
+        break;
+      }
+      gStep = STEP_CONNECT;
+      break;
     case STEP_CONNECT:
       gSeq = gFlashAir->getNextSequenceId();
       //gFlashAir->connect(gSeq, "kumotori",  "ikeuchiyasuki");
@@ -62,6 +74,7 @@ void loop() {
       }
       gSeq = gFlashAir->getNextSequenceId();
       gFlashAir->requestHTTP(gSeq, true, "s3.amazonaws.com",  "/ikeyasu-pub/test.json");
+      gFlashAir->requestHTTPLowMemory(gSeq, true, "s3.amazonaws.com",  "/ikeyasu-pub/test.json");
       gStep = STEP_RESPONSE;
       break;
     case STEP_RESPONSE:

@@ -134,6 +134,13 @@ class AbstructSd2Card {
     virtual uint8_t init(void) = 0;
     virtual uint8_t init(uint8_t sckRateID) = 0;
 
+    virtual boolean startExtCommand(uint8_t mio, uint8_t func, uint32_t addr) = 0;
+    virtual uint16_t sendCommandHeader(uint8_t num_commands, uint32_t command_bytes) = 0;
+    virtual uint16_t sendCommandInfoHeader(uint16_t command_id, uint32_t sequence_id, uint16_t num_args) = 0;
+    virtual uint32_t sendStringArrayArg(const char** string_array, uint8_t array_len) = 0;
+    virtual uint32_t sendStringArg(const char* string) = 0;
+    virtual boolean endExtCommand(uint32_t sent_data_len) = 0;
+
 #ifndef MEMORY_SAVING
     virtual void partialBlockRead(uint8_t value) = 0;
     virtual uint8_t partialBlockRead(void) const = 0;

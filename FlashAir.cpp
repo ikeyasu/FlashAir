@@ -240,10 +240,45 @@ boolean FlashAir::requestHTTP(uint32_t sequenceId, boolean is_https, const char*
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH) ? true : false;
 }
 
+const uint16_t HTTP_REQUEST_HEADER_LEN = 6;
+char *HTTP_REQUEST_HEADER[HTTP_REQUEST_HEADER_LEN] = {
+  "GET ",         // 0
+  NULL,           // 1
+  " HTTP/1.1\r\n",// 2
+  "Host: ",       // 3
+  NULL,           // 4
+  "\r\nUser-Agent: Mozilla/5.0 (FlashAir)\r\n\r\n" //5
+};
+
+boolean FlashAir::requestHTTPLowMemory(uint32_t sequenceId, boolean is_https, const char* host, const char* path) {
+  boolean ok;
+  memset(gBuffer, 0, BUFFER_LENGTH);
+
+  uint8_t* p = gBuffer;
+  uint8_t* arg2_data_head;
+  uint8_t command;
+  uint32_t len = 0;
+  command = is_https ? 0x23 : 0x21;
+  ok = card_->startExtCommand(1, 1, 0x000);
+  if (!ok) return false;
+  len += card_->sendCommandHeader(1, 0);
+  len += card_->sendCommandInfoHeader(command, sequenceId, 2);
+  len += card_->sendStringArg(host); // Argument #1.
+  HTTP_REQUEST_HEADER[1] = (char*)path;
+  HTTP_REQUEST_HEADER[4] = (char*)host;
+  len += card_->sendStringArrayArg((const char**)HTTP_REQUEST_HEADER,
+      HTTP_REQUEST_HEADER_LEN); // Argument #2
+  ok = card_->endExtCommand(len);
+  return ok;
+}
+
+boolean FlashAir::getHTTPResponse(CallbackDataRecieved callback) {
+  //TODO implement
+  return false;
+}
+
+#ifdef ENABLE_GET_STATUS
 const char* FlashAir::getHTTPResponse(uint32_t *out_length) {
-#ifndef ENABLE_GET_STATUS
-#error TODO getHTTPResponse buffer
-#endif
   if (!card_->readExtDataPort(1, 1, 0x200, gBuffer)) {
     return false;
   }
@@ -253,6 +288,7 @@ const char* FlashAir::getHTTPResponse(uint32_t *out_length) {
   return (char*)(gBuffer + 24);
   // TODO: remaining data
 }
+#endif
 
 #ifndef MEMORY_SAVING
 uint32_t FlashAir::connect(const char* ssid, const char* networkKey) {
