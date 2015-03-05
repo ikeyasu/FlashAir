@@ -46,7 +46,8 @@ CPPFLAGS += -isystem $(GTEST_DIR)/include -isystem $(GMOCK_DIR)/include \
 CXXFLAGS += -g -Wall -Wextra -pthread -D USING_MOCK \
 		-Wno-missing-field-initializers \
 		-Wno-missing-braces \
-		-Wno-unused-command-line-argument
+		-Wno-unused-command-line-argument \
+		-Wc++11-compat-deprecated-writable-strings
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
@@ -123,10 +124,15 @@ arduino_mock_all.a : ArduinoMockAll.o
 # gtest_main.a, depending on whether it defines its own main()
 # function.
 
+Sd2Card.o : $(LIB_DIR)/Sd2Card.cpp \
+		$(LIB_DIR)/Sd2Card.h
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
+		$(LIB_DIR)/Sd2Card.cpp
+
 iSdio.o : $(LIB_DIR)/iSdio.cpp \
 		$(LIB_DIR)/iSdio.h
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
-		$(LIB_DIR)/*.cpp
+		$(LIB_DIR)/iSdio.cpp
 
 FlashAir.o : $(LIB_DIR)/FlashAir.cpp \
 		$(LIB_DIR)/FlashAir.h
@@ -147,5 +153,5 @@ test_all.o : $(TEST_DIR)/*.cpp \
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c \
 		$(TEST_DIR)/test_all.cpp
 
-test_all.out : test_all.o gmock_main.a  arduino_mock_all.a iSdio.o FlashAir.a
+test_all.out : test_all.o gmock_main.a  arduino_mock_all.a Sd2Card.o iSdio.o FlashAir.a
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@

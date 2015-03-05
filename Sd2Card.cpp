@@ -19,6 +19,11 @@
  */
 #include <Arduino.h>
 #include "Sd2Card.h"
+
+#ifndef UNUSED
+#define UNUSED(expr) do { (void)(expr); } while (0)
+#endif
+
 //------------------------------------------------------------------------------
 #ifndef SOFTWARE_SPI
 #ifndef SPCR // ATtiny
@@ -97,6 +102,32 @@ static  uint8_t spiReceive(void) {
   return SPDR;
 }
 #endif
+#elif defined(USING_MOCK) // test
+#include <stdio.h>
+static SPIMock* gSPIMock = NULL;
+SPIMock* spiMockInstance() {
+  if(!gSPIMock) {
+    gSPIMock = new SPIMock();
+  }
+  return gSPIMock;
+}
+
+void releaseSpiMock() {
+  if(gSPIMock) {
+    delete gSPIMock;
+    gSPIMock = NULL;
+  }
+}
+
+void spiSend(uint8_t data) {
+  //printf("spiSend() sends %x\n", data);
+  gSPIMock->spiSend(data);
+}
+uint8_t spiReceive(void) {
+  uint8_t r = gSPIMock->spiReceive();
+  //printf("spiReceive() recieves %x\n", r);
+  return r;
+}
 #else  // SOFTWARE_SPI
 //------------------------------------------------------------------------------
 /** nop to tune soft SPI timing */
@@ -478,6 +509,7 @@ uint8_t Sd2Card::init(uint8_t sckRateID, uint8_t chipSelectPin) {
 #if !defined(SOFTWARE_SPI) && defined(SPCR)
   return setSckRate(sckRateID);
 #else
+  UNUSED(sckRateID);
   return true;
 #endif
 
@@ -531,7 +563,9 @@ uint8_t Sd2Card::readBlock(uint32_t block, uint8_t* dst) {
  */
 uint8_t Sd2Card::readData(uint32_t block,
                           uint16_t offset, uint16_t count, uint8_t* dst) {
+#ifdef OPTIMIZE_HARDWARE_SPI
   uint16_t n;
+#endif
   if (count == 0) return true;
   if ((count + offset) > 512) {
     goto fail;

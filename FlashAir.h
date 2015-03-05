@@ -11,7 +11,7 @@
 #endif
 
 #include <Arduino.h>
-#include "AbstructSd2Card.h"
+#include "Sd2Card.h"
 
 #ifdef ENABLE_GET_STATUS
 class Status {
@@ -95,7 +95,7 @@ class FlashAir {
 #ifdef ENABLE_GET_STATUS
     Status status_;
 #endif
-    AbstructSd2Card* card_;
+    Sd2Card* card_;
     boolean isLastCommandSucceededToDispatch_;
   public:
     enum CommandResponse {
@@ -112,11 +112,7 @@ class FlashAir {
       FAILED
     };
 
-#ifndef USING_MOCK
     FlashAir(uint8_t chipSelectPin);
-#else
-    FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card);
-#endif
     uint32_t getNextSequenceId();
     CommandResponse getCommandResponse(uint32_t sequenceID);
 #ifndef MEMORY_SAVING
@@ -146,7 +142,7 @@ class FlashAir {
 
 #ifdef DEBUG_METHODS
     void debugCommandResponse();
-    AbstructSd2Card* getSd2Card() {
+    Sd2Card* getSd2Card() {
       return card_;
     };
 #endif

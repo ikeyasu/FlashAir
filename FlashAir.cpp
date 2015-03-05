@@ -6,11 +6,10 @@
 #include "CommandQueue.h"
 #endif
 #include "iSdio.h"
-#include "AbstructSd2Card.h"
 
-#ifndef USING_MOCK
 #include "Sd2Card.h"
-#else
+
+#ifdef USING_MOCK
 #ifdef DEBUG_METHODS
 #include <Serial.h>
 #endif
@@ -32,21 +31,12 @@ void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
 }
 #endif
 
-#ifndef USING_MOCK
 FlashAir::FlashAir(uint8_t chipSelectPin) {
   card_ = new Sd2Card();
   if (!card_->init(SPI_HALF_SPEED, chipSelectPin)) {
     abort();
   }
 }
-#else
-FlashAir::FlashAir(uint8_t chipSelectPin, AbstructSd2Card* card) {
-  card_ = card;
-  if (!card_->init(SPI_HALF_SPEED, chipSelectPin)) {
-    abort();
-  }
-}
-#endif
 
 uint32_t FlashAir::getNextSequenceId() {
   if (card_->readExtMemory(1, 1, 0x440, 0x8, gBuffer)) {
