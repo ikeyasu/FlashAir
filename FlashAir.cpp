@@ -15,21 +15,14 @@
 #endif
 #endif
 
-#ifdef ENABLE_GET_STATUS
 const uint16_t BUFFER_LENGTH = 512;
 uint8_t gBuffer[512];
-#else
-const uint16_t BUFFER_LENGTH = 32;
-uint8_t gBuffer[0x32];
-#endif
 
-#ifdef ENABLE_GET_STATUS
 void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
   for (int i = 0; i < 4; i++) {
     dest[i] = src[i];
   }
 }
-#endif
 
 FlashAir::FlashAir(uint8_t chipSelectPin) {
   card_ = new Sd2Card();
@@ -164,7 +157,6 @@ boolean FlashAir::disconnect(uint32_t sequenceId) {
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH);
 }
 
-#ifndef MEMORY_SAVING
 boolean FlashAir::isAllCommandDone() {
   return countCommandQueue() == 0;
 }
@@ -185,7 +177,6 @@ void FlashAir::resume() {
     eachCommandQueue(CallbackEachCommands, this);
   }
 }
-#endif
 
 boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* networkKey) {
   memset(gBuffer, 0, BUFFER_LENGTH);
@@ -198,12 +189,16 @@ boolean FlashAir::connect(uint32_t sequenceId, const char* ssid, const char* net
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH) ? true : false;
 }
 
+boolean FlashAir::isConnected() {
+  gBuffer[0] = 0;
+  if (!card_->readExtMemory(1, 1, 0x400 + 0x106, 0x1, gBuffer)) {
+    return false;
+  }
+  return (gBuffer[0] & 0x80) == 0x80;
+}
+
 boolean FlashAir::requestHTTP(uint32_t sequenceId, boolean is_https, const char* host, const char* path) {
-#ifdef ENABLE_GET_STATUS
   memset(gBuffer, 0, BUFFER_LENGTH);
-#else
-#error TODO requestHTTP buffer
-#endif
   uint8_t* p = gBuffer;
   uint8_t* arg2_data_head;
   uint8_t command;
@@ -225,49 +220,11 @@ boolean FlashAir::requestHTTP(uint32_t sequenceId, boolean is_https, const char*
   for (uint32_t i = 0; i < ((4 - (len & 3)) & 3); ++i) { // padding
     *p++ = 0;
   }
-  // Serial.print((char*)(arg2_data_head + sizeof(uint32_t)));
   put_command_header(gBuffer, 1, (p - gBuffer));
   return card_->writeExtDataPort(1, 1, 0x000, gBuffer, BUFFER_LENGTH) ? true : false;
 }
 
-const uint16_t HTTP_REQUEST_HEADER_LEN = 6;
-char *HTTP_REQUEST_HEADER[HTTP_REQUEST_HEADER_LEN] = {
-  "GET ",         // 0
-  NULL,           // 1
-  " HTTP/1.1\r\n",// 2
-  "Host: ",       // 3
-  NULL,           // 4
-  "\r\nUser-Agent: Mozilla/5.0 (FlashAir)\r\n\r\n" //5
-};
 
-boolean FlashAir::requestHTTPLowMemory(uint32_t sequenceId, boolean is_https, const char* host, const char* path) {
-  boolean ok;
-  memset(gBuffer, 0, BUFFER_LENGTH);
-
-  uint8_t* p = gBuffer;
-  uint8_t* arg2_data_head;
-  uint8_t command;
-  uint32_t len = 0;
-  command = is_https ? 0x23 : 0x21;
-  ok = card_->startExtCommand(1, 1, 0x000);
-  if (!ok) return false;
-  len += card_->sendCommandHeader(1, 0);
-  len += card_->sendCommandInfoHeader(command, sequenceId, 2);
-  len += card_->sendStringArg(host); // Argument #1.
-  HTTP_REQUEST_HEADER[1] = (char*)path;
-  HTTP_REQUEST_HEADER[4] = (char*)host;
-  len += card_->sendStringArrayArg((const char**)HTTP_REQUEST_HEADER,
-      HTTP_REQUEST_HEADER_LEN); // Argument #2
-  ok = card_->endExtCommand(len);
-  return ok;
-}
-
-boolean FlashAir::getHTTPResponse(CallbackDataRecieved callback) {
-  //TODO implement
-  return false;
-}
-
-#ifdef ENABLE_GET_STATUS
 const char* FlashAir::getHTTPResponse(uint32_t *out_length) {
   if (!card_->readExtDataPort(1, 1, 0x200, gBuffer)) {
     return false;
@@ -278,9 +235,7 @@ const char* FlashAir::getHTTPResponse(uint32_t *out_length) {
   return (char*)(gBuffer + 24);
   // TODO: remaining data
 }
-#endif
 
-#ifndef MEMORY_SAVING
 uint32_t FlashAir::connect(const char* ssid, const char* networkKey) {
   uint32_t seq = getNextSequenceId();
   if (!appendCommandToQueue(seq)) return 0;
@@ -294,9 +249,7 @@ uint32_t FlashAir::disconnect() {
   isLastCommandSucceededToDispatch_ = disconnect(seq);
   return seq;
 }
-#endif
 
-#ifdef ENABLE_GET_STATUS
 Status* FlashAir::getStatus() {
   memset(gBuffer, 0, 0x200);
   if (!card_->readExtMemory(1, 1, 0x400, 0x200, gBuffer)) {
@@ -384,6 +337,4 @@ Status* FlashAir::getStatus() {
   status_.wifi.fileSystemModified = (gBuffer[0x176] & 0x01) == 0x00;
   return &status_;
 }
-#endif
-
 

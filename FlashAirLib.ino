@@ -1,7 +1,8 @@
 #include "FlashAir.h"
 
 #define SERIAL_DEBUG
-//#define SERIAL_DEBUG_VERBOSE 
+//#define SERIAL_DEBUG_VERBOSE
+//#define SERIAL_DEBUG_VERBOSE2
 #define CHIP_SELECT_PIN 4 /*3*/
 #define LED 13 /*4*/
 
@@ -42,6 +43,7 @@ void setup() {
 
   gFlashAir = new FlashAir(CHIP_SELECT_PIN);
 
+#ifndef MEMORY_SAVING
   Status* status = gFlashAir->getStatus();
   if (status->wifi.connected) {
     gSeq = gFlashAir->getNextSequenceId();
@@ -50,6 +52,9 @@ void setup() {
   } else {
     gStep = STEP_CONNECT;
   }
+#else
+  gStep = STEP_CONNECT;
+#endif
 }
 
 void loop() {
@@ -65,16 +70,26 @@ void loop() {
     case STEP_CONNECT:
       gSeq = gFlashAir->getNextSequenceId();
       //gFlashAir->connect(gSeq, "kumotori",  "ikeuchiyasuki");
-      gFlashAir->connect(gSeq, "urayasu",  "socialap");
+      //gFlashAir->connect(gSeq, "urayasu",  "socialap");
+      gFlashAir->connect(gSeq, ".@AirportAISFreeWiFi",  "");
       gStep = STEP_REQUEST;
       break;
     case STEP_REQUEST:
-      if (!gFlashAir->isCommandDone(gSeq)) {
+      if (!gFlashAir->isCommandDone(gSeq) || !gFlashAir->isConnected()) {
         break;
       }
       gSeq = gFlashAir->getNextSequenceId();
-      gFlashAir->requestHTTP(gSeq, true, "s3.amazonaws.com",  "/ikeyasu-pub/test.json");
+#ifdef SERIAL_DEBUG
+#ifdef SERIAL_DEBUG_VERBOSE
+      Serial.println("requestHTTP");
+#endif
+#endif
+#ifndef MEMORY_SAVING
+      //gFlashAir->requestHTTP(gSeq, true, "s3.amazonaws.com",  "/ikeyasu-pub/test.json");
+      gFlashAir->requestHTTP(gSeq, true, "aiswifi.airportthai.co.th",  "/");
+#else
       gFlashAir->requestHTTPLowMemory(gSeq, true, "s3.amazonaws.com",  "/ikeyasu-pub/test.json");
+#endif
       gStep = STEP_RESPONSE;
       break;
     case STEP_RESPONSE:
@@ -82,7 +97,12 @@ void loop() {
         break;
       }
       gStep = STEP_DISPLAY;
+#ifndef MEMORY_SAVING
       response = gFlashAir->getHTTPResponse(&len);
+#else
+      // TODO: implement
+      //gFlashAir->getHTTPResponse(&len, NULL);
+#endif
       break;
     case STEP_DISPLAY:
       gStep = STEP_FIN;
@@ -110,17 +130,21 @@ void loop() {
   Serial.println(status->wifi.ssid);
   Serial.print("conencted=");
   Serial.print(status->wifi.connected);
+  Serial.print(", connected2=");
+  Serial.print(gFlashAir->isConnected());
   if (gStep == STEP_DISPLAY) {
     Serial.print(F(" len="));
     Serial.print(len);
     Serial.println(F(""));
     for (i = 0; i < len; i++) {
-      Serial.print(response[i]);
+      //Serial.print(response[i]);
     }
   } else {
     Serial.println(F(""));
   }
+#ifdef SERIAL_DEBUG_VERBOSE2
   gFlashAir->debugCommandResponse();
+#endif
 #else
 
   switch (gStep) {
@@ -142,7 +166,9 @@ void loop() {
 #endif
 #endif
   delay(500);
+#ifndef MEMORY_SAVING
   gFlashAir->resume();
+#endif
 
 }
 

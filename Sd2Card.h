@@ -175,13 +175,11 @@ class Sd2Card {
   public:
     /** Construct an instance of Sd2Card. */
     Sd2Card(void) : errorCode_(0), inBlock_(0), partialBlockRead_(0), type_(0) {}
-#ifndef MEMORY_SAVING
     uint32_t cardSize(void);
     uint8_t erase(uint32_t firstBlock, uint32_t lastBlock);
     uint8_t eraseSingleBlockEnable(void);
     /** \return error data for last error. */
     uint8_t errorData(void);
-#endif
     /**
      * \return error code for last error. See Sd2Card.h for a list of error codes.
      */
@@ -205,24 +203,14 @@ class Sd2Card {
 #endif
     uint8_t init(uint8_t sckRateID, uint8_t chipSelectPin);
 
-    boolean startExtCommand(uint8_t mio, uint8_t func, uint32_t addr);
-    uint16_t sendCommandHeader(uint8_t num_commands, uint32_t command_bytes);
-    uint16_t sendCommandInfoHeader(uint16_t command_id, uint32_t sequence_id, uint16_t num_args);
-    uint32_t sendStringArrayArg(const char** string_array, uint8_t array_len);
-    uint32_t sendStringArg(const char* string);
-    boolean endExtCommand(uint32_t sent_data_len);
-
-#ifndef MEMORY_SAVING
     void partialBlockRead(uint8_t value);
     /** Returns the current value, true or false, for partial block read. */
     uint8_t partialBlockRead(void) const {
       return partialBlockRead_;
     }
-#endif
     uint8_t readBlock(uint32_t block, uint8_t* dst);
     uint8_t readData(uint32_t block,
                      uint16_t offset, uint16_t count, uint8_t* dst);
-#ifndef MEMORY_SAVING
     /**
      * Read a cards CID register. The CID contains card identification
      * information such as Manufacturer ID, Product name, Product serial
@@ -236,7 +224,6 @@ class Sd2Card {
     uint8_t readCSD(csd_t* csd) {
       return readRegister(CMD9, csd);
     }
-#endif
     void readEnd(void);
 #if !defined(SOFTWARE_SPI) && defined(SPCR)
     uint8_t setSckRate(uint8_t sckRateID);
@@ -246,20 +233,16 @@ class Sd2Card {
       return type_;
     }
     uint8_t writeBlock(uint32_t blockNumber, const uint8_t* src);
-#ifndef MEMORY_SAVING
     uint8_t writeData(const uint8_t* src);
     uint8_t writeStart(uint32_t blockNumber, uint32_t eraseCount);
     uint8_t writeStop(void);
-#endif
 
     uint8_t readExtDataPort(uint8_t mio, uint8_t func, uint16_t addr, uint8_t* dst);
     uint8_t readExtMemory(uint8_t mio, uint8_t func, uint32_t addr, uint16_t count, uint8_t* dst);
     uint8_t writeExtDataPort(uint8_t mio, uint8_t func, uint16_t addr, const uint8_t* src);
     uint8_t writeExtDataPort(uint8_t mio, uint8_t func, uint16_t addr, const uint8_t* src, uint16_t length);
-#ifdef MEMORY_SAVING
     uint8_t writeExtMemory(uint8_t mio, uint8_t func, uint32_t addr, uint16_t count, const uint8_t* src);
     uint8_t writeExtMask(uint8_t mio, uint8_t func, uint32_t addr, uint8_t mask, const uint8_t* src);
-#endif
 
 #ifndef USING_MOCK
   protected:

@@ -5,15 +5,9 @@
 
 #include "config.h"
 
-#ifndef MEMORY_SAVING
-#define DEBUG_METHODS
-#define ENABLE_GET_STATUS
-#endif
-
 #include <Arduino.h>
 #include "Sd2Card.h"
 
-#ifdef ENABLE_GET_STATUS
 class Status {
   public:
     class WiFi {
@@ -86,15 +80,10 @@ class Status {
     };
     WiFi wifi;
 };
-#endif
-
-typedef boolean (*CallbackDataRecieved)(uint8_t c);
 
 class FlashAir {
   private:
-#ifdef ENABLE_GET_STATUS
     Status status_;
-#endif
     Sd2Card* card_;
     boolean isLastCommandSucceededToDispatch_;
   public:
@@ -115,30 +104,21 @@ class FlashAir {
     FlashAir(uint8_t chipSelectPin);
     uint32_t getNextSequenceId();
     CommandResponse getCommandResponse(uint32_t sequenceID);
-#ifndef MEMORY_SAVING
     boolean isCommandSucceeded(uint32_t sequenceID);
-#endif
     boolean isCommandDone(uint32_t sequenceID);
 
-#ifdef ENABLE_GET_STATUS
     Status* getStatus();
-#endif
     boolean disconnect(uint32_t sequenceID);
     boolean connect(uint32_t sequenceId, const char* ssid, const char* networkKey);
+    boolean isConnected();
     boolean requestHTTP(uint32_t sequenceID, boolean is_https, const char* host, const char* path);
-    boolean requestHTTPLowMemory(uint32_t sequenceID, boolean is_https, const char* host, const char* path);
-#ifdef ENABLE_GET_STATUS
     //uint32_t requestHTTP(const char* host, const char* path);
     const char* getHTTPResponse(uint32_t* out_length);
-#endif
-    boolean getHTTPResponse(CallbackDataRecieved callback);
-#ifndef MEMORY_SAVING
     uint32_t disconnect();
     uint32_t connect( const char* ssid, const char* networkKey);
     boolean isLastCommandSucceededToDispatch();
     boolean isAllCommandDone();
     void resume();
-#endif
 
 #ifdef DEBUG_METHODS
     void debugCommandResponse();

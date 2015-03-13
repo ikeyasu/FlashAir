@@ -93,12 +93,16 @@ static  uint8_t spiReceive(void) {
 // functions for hardware SPI
 /** Send a byte to the card */
 static void spiSend(uint8_t b) {
+  //Serial.print("spiSend() sends ");
+  //Serial.println(b);
   SPDR = b;
   while (!(SPSR & (1 << SPIF)));
 }
 /** Receive a byte from the card */
 static  uint8_t spiReceive(void) {
   spiSend(0XFF);
+  //Serial.print("spiReceive() recieves ");
+  //Serial.println(SPDR);
   return SPDR;
 }
 #endif
@@ -184,102 +188,6 @@ void spiSend(uint8_t data) {
 }
 #endif  // SOFTWARE_SPI
 
-// utilities to send a data block.
-template <typename T>
-uint8_t send_T(T value) {
-  static uint8_t buffer[4];
-  int i;
-  *((T*)buffer) = value;
-  uint8_t len = sizeof(T);
-  for (i = 0; i < len; i++) {
-    spiSend(buffer[i]);
-  }
-  return len;
-}
-
-static inline
-uint8_t send_u8(uint8_t value) {
-  return send_T(value);
-}
-
-static inline
-uint8_t send_u16(uint16_t value) {
-  return send_T(value);
-}
-
-static inline
-uint8_t send_u32(uint32_t value) {
-  return send_T(value);
-}
-
-uint16_t Sd2Card::sendCommandHeader(uint8_t num_commands,
-		uint32_t command_bytes) {
-  uint16_t len = 0;
-  len += send_u8(0x01);           // Write Data ID
-  len += send_u8(num_commands);   // Number of commands.
-  len += send_u16(0);             // reserved.
-  len += send_u32(command_bytes); // size of command write data.
-  len += send_u32(0);             // reserved.
-  return len;
-}
-
-uint16_t Sd2Card::sendCommandInfoHeader(uint16_t command_id,
-		uint32_t sequence_id, uint16_t num_args) {
-  uint16_t len = 0;
-  len += send_u16(0);           // reserved.
-  len += send_u16(command_id);  // iSDIO command id.
-  len += send_u32(sequence_id); // iSDIO command sequence id.
-  len += send_u16(num_args);    // Number of Arguments.
-  len += send_u16(0);           // Reserved.
-  return len;
-}
-
-uint16_t sendArgHeader(uint32_t string_total_len) {
-  return send_u32(string_total_len);
-}
-
-uint16_t sendArgPadding(uint32_t string_total_len) {
-  uint32_t len = (4 - (string_total_len & 3)) & 3;
-  for (uint32_t i = 0; i < len; ++i) {
-    send_u8(0);
-  }
-  return len;
-}
-
-uint32_t Sd2Card::sendStringArg(const char* string) {
-  uint16_t i, len = strlen(string);
-  uint32_t buffer_len = 0;
-  buffer_len += sendArgHeader(len);
-  for (i = 0; i < len; i++) {
-    buffer_len += send_u8(string[i]);
-  }
-  buffer_len += sendArgPadding(len);
-  return buffer_len;
-}
-
-uint32_t strarylen(const char** string_array, uint8_t array_len) {
-  uint8_t i;
-  uint32_t len = 0;
-  for (i = 0; i < array_len; i++) {
-    len += strlen(string_array[i]);
-  }
-  return len;
-}
-
-uint32_t Sd2Card::sendStringArrayArg(const char** string_array,
-    uint8_t array_len) {
-  uint8_t i, j;
-  uint32_t buffer_len = 0;
-  buffer_len += sendArgHeader(strarylen(string_array, array_len));
-  for (i = 0; i < array_len; i++) {
-    for (j = 0; j < strlen(string_array[i]); j++) {
-      buffer_len += send_u8(string_array[i][j]);
-    }
-  }
-  buffer_len += sendArgPadding(buffer_len - sizeof(uint32_t));
-  return buffer_len;
-}
-
 //------------------------------------------------------------------------------
 // send command and return error code.  Return zero for OK
 uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
@@ -308,7 +216,6 @@ uint8_t Sd2Card::cardCommand(uint8_t cmd, uint32_t arg) {
   for (uint8_t i = 0; ((status_ = spiReceive()) & 0X80) && i != 0XFF; i++);
   return status_;
 }
-#ifndef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /**
  * Determine the size of an SD flash memory card.
@@ -335,7 +242,6 @@ uint32_t Sd2Card::cardSize(void) {
     return 0;
   }
 }
-#endif
 //------------------------------------------------------------------------------
 void Sd2Card::chipSelectHigh(void) {
   digitalWrite(chipSelectPin_, HIGH);
@@ -344,7 +250,6 @@ void Sd2Card::chipSelectHigh(void) {
 void Sd2Card::chipSelectLow(void) {
   digitalWrite(chipSelectPin_, LOW);
 }
-#ifndef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /** Erase a range of blocks.
  *
@@ -395,7 +300,6 @@ uint8_t Sd2Card::eraseSingleBlockEnable(void) {
   csd_t csd;
   return readCSD(&csd) ? csd.v1.erase_blk_en : 0;
 }
-#endif
 //------------------------------------------------------------------------------
 /**
  * \return error code for last error. See Sd2Card.h for a list of error codes.
@@ -404,7 +308,6 @@ uint8_t Sd2Card::errorCode(void) {
   return errorCode_;
 }
 
-#ifndef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /**
  * \return error data for last error.
@@ -412,7 +315,6 @@ uint8_t Sd2Card::errorCode(void) {
 uint8_t Sd2Card::errorData(void) {
   return status_;
 }
-#endif
 
 //------------------------------------------------------------------------------
 /**
@@ -517,7 +419,6 @@ fail:
   chipSelectHigh();
   return false;
 }
-#ifndef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /**
  * Enable or disable partial block reads.
@@ -536,7 +437,6 @@ void Sd2Card::partialBlockRead(uint8_t value) {
   readEnd();
   partialBlockRead_ = value;
 }
-#endif
 //------------------------------------------------------------------------------
 /**
  * Read a 512 byte block from an SD card device.
@@ -729,7 +629,6 @@ fail:
   chipSelectHigh();
   return false;
 }
-#ifndef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /**
  * Writes a 512 byte block to an SD card.
@@ -784,7 +683,6 @@ uint8_t Sd2Card::writeData(const uint8_t* src) {
   }
   return writeData(WRITE_MULTIPLE_TOKEN, src);
 }
-#endif
 //------------------------------------------------------------------------------
 // send one block of data for write block or write multiple blocks
 uint8_t Sd2Card::writeData(uint8_t token, const uint8_t* src) {
@@ -821,7 +719,6 @@ uint8_t Sd2Card::writeData(uint8_t token, const uint8_t* src) {
   }
   return true;
 }
-#ifndef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /** Start a write multiple blocks sequence.
  *
@@ -877,7 +774,6 @@ fail:
   chipSelectHigh();
   return false;
 }
-#endif
 
 /* Arduino Sdio Library
  * Copyright (C) 2014 by Munehiro Doi
@@ -1070,7 +966,6 @@ uint8_t Sd2Card::writeExtDataPort(uint8_t mio, uint8_t func,
 
   return writeExt(arg, src, length);
 }
-#ifdef MEMORY_SAVING
 //------------------------------------------------------------------------------
 /**
  * Write an extension register space.
@@ -1107,52 +1002,4 @@ uint8_t Sd2Card::writeExtMask(uint8_t mio, uint8_t func,
 
   return writeExt(arg, src, 1);
 }
-#endif
 
-boolean Sd2Card::startExtCommand(uint8_t mio, uint8_t func,
-                              uint32_t addr) {
-  uint32_t arg =
-    (((uint32_t)mio & 0x1) << 31) |
-    (mio ? (((uint32_t)func & 0x7) << 28) : (((uint32_t)func & 0xF) << 27)) |
-    (((uint32_t)addr & 0x1FE00) << 9);
-
-  if (cardCommand(CMD49, arg)) { // call chipSelectLow() in cardCommand()
-    error(SD_CARD_ERROR_CMD49);
-    chipSelectHigh();
-    return false;
-  }
-  spiSend(DATA_START_BLOCK);
-  return true;
-}
-
-boolean Sd2Card::endExtCommand(uint32_t sent_data_len) {
-  uint32_t i;
-  uint8_t status;
-
-  for (i = sent_data_len; i < 512; ++i) {
-    spiSend(0xFF);
-  }
-  // dummy 16-bit crc
-  spiSend(0xFF);
-  spiSend(0xFF);
-
-  // wait a data response token
-  status = spiReceive();
-  if ((status & DATA_RES_MASK) != DATA_RES_ACCEPTED) {
-    error(SD_CARD_ERROR_WRITE);
-    goto fail;
-  }
-
-  // wait for flash programming to complete
-  if (!waitNotBusy(SD_WRITE_TIMEOUT)) {
-    error(SD_CARD_ERROR_WRITE_TIMEOUT);
-    goto fail;
-  }
-
-  chipSelectHigh();
-  return true;
-
-fail:
-  chipSelectHigh();
-  return false;
-}

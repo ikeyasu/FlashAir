@@ -52,32 +52,6 @@ void EXPECT_CALL_SPISEND(SPIMock* mock, uint8_t* expected_array,
   }
 }
 
-TEST(Sd2Card, sendCommandHeader) {
-  InSequence sequential_test;
-  SPIMock* spiMock = spiMockInstance();
-  Sd2Card* card = new Sd2Card();
-
-  uint8_t s[12] = {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  EXPECT_CALL_SPISEND(spiMock, s, sizeof(s));
-
-  card->sendCommandHeader(1, 0);
-
-  releaseSpiMock();
-}
-
-TEST(Sd2Card, sendCommandInfoHeader) {
-  InSequence sequential_test;
-  SPIMock* spiMock = spiMockInstance();
-  Sd2Card* card = new Sd2Card();
-
-  uint8_t s[12] = {0, 0, 1, 0, 1, 0, 0, 0, 2, 0, 0, 0};
-  EXPECT_CALL_SPISEND(spiMock, s, sizeof(s));
-
-  card->sendCommandInfoHeader(1, 1, 2);
-
-  releaseSpiMock();
-}
-
 TEST(Sd2Card, writeExtDataPort) {
   ArduinoMock* arduinoMock = arduinoMockInstance();
   SPIMock* spiMock = spiMockInstance();
