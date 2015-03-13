@@ -6,18 +6,16 @@ using ::testing::InSequence;
 using ::testing::_;
 using ::testing::AnyNumber;
 
-// TODO: Serial.print spiSend, spiReceive
-
 void expectCardCommand(ArduinoMock* arduinoMock, SPIMock* spiMock,
     uint8_t cmd, uint32_t arg, uint8_t status) {
   InSequence sequential_test;
   // readEnd
   EXPECT_CALL(*spiMock, spiReceive()).Times(AnyNumber());
 
-  EXPECT_CALL(*arduinoMock, digitalWrite(_, _)).Times(AnyNumber());
+  EXPECT_CALL(*arduinoMock, digitalWrite(0, 0)).WillOnce(Return());
 
   // waitNotBusy
-  EXPECT_CALL(*arduinoMock, millis()).WillRepeatedly(Return(0));
+  EXPECT_CALL(*arduinoMock, millis()).WillOnce(Return(0));
   EXPECT_CALL(*spiMock, spiReceive()).WillOnce(Return(0xFF));
 
   EXPECT_CALL(*spiMock, spiSend(cmd | 0x40)).Times(1);
@@ -45,6 +43,31 @@ TEST(Sd2Card, cardCommand) {
   releaseArduinoMock();
 }
 
+TEST(Sd2Card, cardCommandStatus0xFF) {
+  ArduinoMock* arduinoMock = arduinoMockInstance();
+  SPIMock* spiMock = spiMockInstance();
+  Sd2Card* card = new Sd2Card();
+
+  expectCardCommand(arduinoMock, spiMock, CMD0, 0, 0xFF);
+  ASSERT_EQ(0xFF, card->cardCommand(CMD0, 0));
+
+  releaseSpiMock();
+  releaseArduinoMock();
+}
+
+TEST(Sd2Card, cardCommandCMD48) {
+  ArduinoMock* arduinoMock = arduinoMockInstance();
+  SPIMock* spiMock = spiMockInstance();
+  Sd2Card* card = new Sd2Card();
+
+  expectCardCommand(arduinoMock, spiMock, CMD48, 0, 0);
+  ASSERT_EQ(0, card->cardCommand(CMD48, 0));
+
+  releaseSpiMock();
+  releaseArduinoMock();
+}
+
+
 void EXPECT_CALL_SPISEND(SPIMock* mock, uint8_t* expected_array,
     uint32_t array_len) {
   for (unsigned long i = 0; i < array_len; i++) {
@@ -64,6 +87,45 @@ TEST(Sd2Card, writeExtDataPort) {
   EXPECT_CALL(*spiMock, spiReceive()).WillRepeatedly(Return(0xFF));
 
   card->writeExtDataPort(1, 1, 0, buf, 3);
+
+  releaseSpiMock();
+  releaseArduinoMock();
+}
+
+TEST(Sd2Card, waitStartBlock) {
+  ArduinoMock* arduinoMock = arduinoMockInstance();
+  SPIMock* spiMock = spiMockInstance();
+  Sd2Card* card = new Sd2Card();
+
+  // wait for star block token
+  EXPECT_CALL(*arduinoMock, millis()).WillOnce(Return(0));
+  EXPECT_CALL(*spiMock, spiReceive()).WillOnce(Return(DATA_START_BLOCK));
+
+  card->waitStartBlock();
+
+  releaseSpiMock();
+  releaseArduinoMock();
+}
+
+TEST(Sd2Card, readExt) {
+  InSequence sequential_test;
+  ArduinoMock* arduinoMock = arduinoMockInstance();
+  SPIMock* spiMock = spiMockInstance();
+  Sd2Card* card = new Sd2Card();
+  uint8_t buffer[10];
+
+  expectCardCommand(arduinoMock, spiMock, CMD48, 0, 0);
+
+  // wait for star block token
+  EXPECT_CALL(*arduinoMock, millis()).WillOnce(Return(0));
+  EXPECT_CALL(*spiMock, spiReceive()).WillOnce(Return(DATA_START_BLOCK));
+
+  EXPECT_CALL(*spiMock, spiReceive()).Times(10).WillRepeatedly(Return(1));
+  EXPECT_CALL(*spiMock, spiReceive()).Times(514-10).WillRepeatedly(Return(0));
+  EXPECT_CALL(*arduinoMock, digitalWrite(_, 1)).WillOnce(Return());
+  EXPECT_CALL(*spiMock, spiSend(0xFF)).Times(1);
+
+  card->readExt(0, buffer, 10);
 
   releaseSpiMock();
   releaseArduinoMock();

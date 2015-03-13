@@ -55,6 +55,10 @@ uint8_t const CMD32 = 0X20;
 uint8_t const CMD33 = 0X21;
 /** ERASE - erase all previously selected blocks */
 uint8_t const CMD38 = 0X26;
+/** EXTENSION READ - Extension Register Read Command (Single Block) */
+uint8_t const CMD48 = 0X30;
+/** EXTENSION WRITE - Extension Register Write Command (Single Block) */
+uint8_t const CMD49 = 0X31;
 /** APP_CMD - escape for application specific command */
 uint8_t const CMD55 = 0X37;
 /** READ_OCR - read the OCR register of a card */

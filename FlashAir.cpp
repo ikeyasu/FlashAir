@@ -16,7 +16,7 @@
 #endif
 
 const uint16_t BUFFER_LENGTH = 512;
-uint8_t gBuffer[512];
+uint8_t gBuffer[BUFFER_LENGTH];
 
 void copyIPAddress(uint8_t src[4], uint8_t dest[4]) {
   for (int i = 0; i < 4; i++) {

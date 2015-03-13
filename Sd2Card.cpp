@@ -796,20 +796,6 @@ fail:
  * <http://www.gnu.org/licenses/>.
  */
 
-//------------------------------------------------------------------------------
-// SD extension commands
-/** EXTENSION READ - Extension Register Read Command (Single Block) */
-uint8_t const CMD48 = 0X30;
-/** EXTENSION WRITE - Extension Register Write Command (Single Block) */
-uint8_t const CMD49 = 0X31;
-//------------------------------------------------------------------------------
-// SD extension error codes.
-/** card returned an error response for CMD48 (read extension block) */
-uint8_t const SD_CARD_ERROR_CMD48 = 0X80;
-/** card returned an error response for CMD49 (write extension block) */
-uint8_t const SD_CARD_ERROR_CMD49 = 0X81;
-//------------------------------------------------------------------------------
-
 /** Perform Extention Read. */
 uint8_t Sd2Card::readExt(uint32_t arg, uint8_t* dst, uint16_t count) {
   uint16_t i;

@@ -98,6 +98,10 @@ uint8_t const SD_CARD_ERROR_CMD17 = 0X3;
 uint8_t const SD_CARD_ERROR_CMD24 = 0X4;
 /**  WRITE_MULTIPLE_BLOCKS command failed */
 uint8_t const SD_CARD_ERROR_CMD25 = 0X05;
+/** card returned an error response for CMD48 (read extension block) */
+uint8_t const SD_CARD_ERROR_CMD48 = 0X80;
+/** card returned an error response for CMD49 (write extension block) */
+uint8_t const SD_CARD_ERROR_CMD49 = 0X81;
 /** card returned an error response for CMD58 (read OCR) */
 uint8_t const SD_CARD_ERROR_CMD58 = 0X06;
 /** SET_WR_BLK_ERASE_COUNT failed */
